@@ -55,7 +55,7 @@ export async function POST(
     const companionKey = {
       companionName: name!,
       userId: user.id,
-      modalName: "llama-2-13b-chat",
+      modelName: "llama-2-13b-chat",
     };
     const memoryManager = await MemoryManager.getInstance();
 
@@ -83,21 +83,21 @@ export async function POST(
     }
     const { handlers } = LangChainStream();
     // Call Replicate for inference
-    const modal = new Replicate({
+    const model = new Replicate({
       model:
         "meta/llama-2-13b-chat:f4e2de70d66816a838a89eeeb621910adffb0dd0baba3976c96980970978018d",
       input: {
         max_length: 2048,
       },
-      apiKey: process.env.REPLICATE_API_TOKEN!,
+      apiKey: process.env.REPLICATE_API_TOKEN,
       callbackManager: CallbackManager.fromHandlers(handlers),
     });
 
     // Turn verbose on for debugging
-    modal.verbose = true;
+    model.verbose = true;
 
     const resp = String(
-      await modal
+      await model
         .call(
           `
         ONLY generate plain sentences without prefix of who is speaking. DO NOT use ${companion.name}: prefix. 

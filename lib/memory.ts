@@ -1,11 +1,11 @@
 import { Redis } from "@upstash/redis";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
-import { PineconeClient } from "@pinecone-database/pinecone";
+import { Index, PineconeClient, RecordMetadata } from "@pinecone-database/pinecone";
 import { PineconeStore } from "langchain/vectorstores/pinecone";
 
 export type CompanionKey = {
   companionName: string;
-  modalName: string;
+  modelName: string;
   userId: string;
 };
 
@@ -32,12 +32,13 @@ export class MemoryManager {
     recentChatHistory: string,
     companionFileName: string
   ) {
+    if (!this.vectorDBClient) {
+      throw new Error("Vector database client is not initialized.");
+    }
 
-    const pineconeClient = <PineconeClient>this.vectorDBClient;
-
-    const pineconeIndex = pineconeClient.Index(
+    const pineconeIndex = this.vectorDBClient.Index(
       process.env.PINECONE_INDEX! || ""
-    )
+    ) as unknown as Index<RecordMetadata>;
 
     const vectorStore = await PineconeStore.fromExistingIndex(
       new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }),
@@ -50,10 +51,9 @@ export class MemoryManager {
         console.log("WARNING: failed to get vector search results.", err);
       });
     return similarDocs;
-
   }
 
-    public static async getInstance(): Promise<MemoryManager> {
+  public static async getInstance(): Promise<MemoryManager> {
     if (!MemoryManager.instance) {
       MemoryManager.instance = new MemoryManager();
       await MemoryManager.instance.init();
@@ -62,7 +62,7 @@ export class MemoryManager {
   }
 
   private generateRedisCompanionKey(companionKey: CompanionKey): string {
-    return `${companionKey.companionName}-${companionKey.modalName}-${companionKey.userId}`;
+    return `${companionKey.companionName}-${companionKey.modelName}-${companionKey.userId}`;
   }
 
   public async writeToHistory(text: string, companionKey: CompanionKey) {
